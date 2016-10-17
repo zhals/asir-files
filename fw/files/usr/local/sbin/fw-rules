@@ -1,26 +1,27 @@
-#! /bin/bash
+#!/bin/sh
 
 if [ $# -ne 1 ]; then
-	echo "Necesitas un parametro [start | stop ]"
-	exit 
+	echo "You must supply one parameter {start|stop|restart}"
+	exit 1
 fi
+
+# VARS
+DMZ_NET="172.20.100.0/24"
+LAN_NET="192.168.100.0/24"
+
+DMZ_IF="ens3"
+WAN_IF="ens9"
+LAN_IF="ens10"
+
+DMZ_IP="172.20.100.254"
+WAN_IP="10.3.4.153"
+LAN_IP="192.168.100.254"
 
 case $1 in
 "start")
-	# VARIABLES
-	DMZ_NET=172.20.100.0/24
-	LAN_NET=192.168.100.0/24
-	
-	DMZ_IF="ens3"
-	WAN_IF="ens9"
-	LAN_IF="ens10"
-
-	DMZ_IP="172.20.100.254"
-	WAN_IP="10.3.4.153"
-	LAN_IP="192.168.100.254"
 
 	# Remove rules
-	iptables -F
+	$0 stop
 	
 	# Default policies
 	iptables -P INPUT DROP
@@ -94,13 +95,18 @@ case $1 in
 
 "stop")
 	iptables -F
+	iptables -t nat -F
 	iptables -P INPUT ACCEPT
 	iptables -P OUTPUT ACCEPT
 	iptables -P FORWARD ACCEPT
 	;;
+"restart)
+	$0 stop
+	$0 start
+	;;
 *)
 	echo "Se necesita un parametro válido [start | stop]"
-	exit
+	exit 1
 	;;
 esac
-exit
+exit 0
