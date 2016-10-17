@@ -1,0 +1,106 @@
+#! /bin/bash
+
+if [ $# -ne 1 ]; then
+	echo "Necesitas un parametro [start | stop ]"
+	exit 
+fi
+
+case $1 in
+"start")
+	# VARIABLES
+	DMZ_NET=172.20.100.0/24
+	LAN_NET=192.168.100.0/24
+	
+	DMZ_IF="ens3"
+	WAN_IF="ens9"
+	LAN_IF="ens10"
+
+	DMZ_IP="172.20.100.254"
+	WAN_IP="10.3.4.153"
+	LAN_IP="192.168.100.254"
+
+	# Remove rules
+	iptables -F
+	
+	# Default policies
+	iptables -P INPUT DROP
+	iptables -P OUTPUT DROP
+	iptables -P FORWARD DROP
+
+	# SSH desde REDES a FW (rules 1,2,3)
+	iptables -A INPUT -i $WAN_IF -d $WAN_IP -p tcp --dport 2222 -j ACCEPT
+	iptables -A INPUT -i $LAN_IF -s $LAN_NET -d $LAN_IP -p tcp --dport 2222 -j ACCEPT
+	iptables -A INPUT -i $DMZ_IF -s $DMZ_NET -d $DMZ_IP  -p tcp --dport 2222 -j ACCEPT
+
+#	iptables -A OUTPUT -o $WAN_IF -s $WAN_IP -p tcp --sport 2222 -j ACCEPT
+#	iptables -A OUTPUT -o $LAN_IF -s $LAN_IP -p tcp --sport 2222 -d $LAN_NET -j ACCEPT
+#	iptables -A OUTPUT -o $DMZ_IF -s $DMZ_IP  -p tcp --sport 2222 -d $DMZ_NET -j ACCEPT
+
+	iptables -A OUTPUT -p tcp --sport 2222 -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+	# DHCP Client FW
+	iptables -A OUTPUT -o $WAN_IF -p udp --dport 67 --sport 68 -j ACCEPT
+
+	iptables -A INPUT -i $WAN_IF -p udp --sport 67 --dport 68 -j ACCEPT
+
+
+#>	iptables -A INPUT -i $WAN_IF -p udp --sport 67 --dport 68 -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# PING (icmp) client
+
+	iptables -A OUTPUT -p icmp -j ACCEPT
+	iptables -A INPUT -p icmp -j ACCEPT
+
+#>	iptables -A INPUT -p icmp -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+
+	# Salida a Repositorios de Servidores (7)
+	iptables -A FORWARD -i $DMZ_IF -s $DMZ_NET -o $WAN_IF -p tcp --dport 80 -j ACCEPT
+	iptables -A FORWARD -o $DMZ_IF -d $DMZ_NET -i $WAN_IF -p tcp --sport 80 -j ACCEPT
+	iptables -t nat -A POSTROUTING -s $DMZ_NET -o $WAN_IF -p tcp --dport 80 -j SNAT --to $WAN_IP
+
+	# SSH desde LAN a los servidores DMZ (8)
+	iptables -A FORWARD -i $LAN_IF -s $LAN_NET -o $DMZ_IF -d $DMZ_NET -p tcp --dport 22 -j ACCEPT
+	iptables -A FORWARD -o $LAN_IF -d $LAN_NET -i $DMZ_IF -s $DMZ_NET -p tcp --sport 22 -j ACCEPT
+
+	# DNS desde LAN a servidor DNS en la DMZ
+	iptables -A FORWARD -i $LAN_IF -s $LAN_NET -o $DMZ_IF -d $DMZ_NET -p tcp --dport 53 -j ACCEPT
+	iptables -A FORWARD -o $LAN_IF -d $LAN_NET -i $DMZ_IF -s $DMZ_NET -p tcp --sport 53 -j ACCEPT
+
+	# HTTP desde LAN a servidor DMZ
+	iptables -A FORWARD -i $LAN_IF -s $LAN_NET -o $DMZ_IF -d $DMZ_NET -p tcp --dport 80 -j ACCEPT
+	iptables -A FORWARD -o $LAN_IF -d $LAN_NET -i $DMZ_IF -s $DMZ_NET -p tcp --sport 80 -j ACCEPT
+
+	# HTTPS desde LAN a servidor DMZ
+	iptables -A FORWARD -i $LAN_IF -s $LAN_NET -o $DMZ_IF -d $DMZ_NET -p tcp --dport 443 -j ACCEPT
+	iptables -A FORWARD -o $LAN_IF -d $LAN_NET -i $DMZ_IF -s $DMZ_NET -p tcp --sport 443 -j ACCEPT
+
+	# Navegacion WEB desde LAN a INTERNET (WAN)
+	iptables -A FORWARD -i $LAN_IF -s $LAN_NET -o $WAN_IF -p tcp --dport 80 -j ACCEPT
+	iptables -A FORWARD -o $LAN_IF -d $LAN_NET -i $WAN_IF -p tcp --sport 80 -j ACCEPT
+	iptables -t nat -A POSTROUTING -s $LAN_NET -o $WAN_IF -p tcp --dport 80 -j SNAT --to $WAN_IP
+
+	iptables -A FORWARD -i $LAN_IF -s $LAN_NET -o $WAN_IF -p tcp --dport 443 -j ACCEPT
+	iptables -A FORWARD -o $LAN_IF -d $LAN_NET -i $WAN_IF -p tcp --sport 443 -j ACCEPT
+	iptables -t nat -A POSTROUTING -s $LAN_NET -o $WAN_IF -p tcp --dport 443 -j SNAT --to $WAN_IP
+
+
+	# PING ICMP
+#	iptables -A FORWARD -i $LAN_IF -s $LAN_NET -o $DMZ_IF -d $DMZ_NET -p icmp -j ACCEPT
+#	iptables -A FORWARD -i $DMZ_IF -s $DMZ_NET -o $LAN_IF -d $LAN_IF -p icmp -j ACCEPT
+	
+	iptables -A FORWARD -p icmp -j ACCEPT
+	;;
+
+"stop")
+	iptables -F
+	iptables -P INPUT ACCEPT
+	iptables -P OUTPUT ACCEPT
+	iptables -P FORWARD ACCEPT
+	;;
+*)
+	echo "Se necesita un parametro válido [start | stop]"
+	exit
+	;;
+esac
+exit
