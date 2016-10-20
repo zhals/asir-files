@@ -17,6 +17,12 @@ DMZ_IP="172.20.100.254"
 WAN_IP="10.3.4.153"
 LAN_IP="192.168.100.254"
 
+CFG_FILE="/etc/default/fw-rules"
+
+if [ -r "$CFG_FILE" ] ; then
+	. $CFG_FILE
+fi
+
 case $1 in
 "start")
 
