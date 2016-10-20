@@ -23,11 +23,16 @@ if [ -r "$CFG_FILE" ] ; then
 	. $CFG_FILE
 fi
 
+STATUS_FILE="/var/run/fw-rules"
+
 case $1 in
 "start")
 
 	# Remove rules
 	$0 stop
+	
+	#enable routing
+	echo "1" > /proc/sys/net/ipv4/ip_forward
 	
 	# Default policies
 	iptables -P INPUT DROP
@@ -97,18 +102,30 @@ case $1 in
 #	iptables -A FORWARD -i $DMZ_IF -s $DMZ_NET -o $LAN_IF -d $LAN_IF -p icmp -j ACCEPT
 	
 	iptables -A FORWARD -p icmp -j ACCEPT
+	echo "fw-rules service started" > $STATUS_FILE
 	;;
 
 "stop")
+	rm -f "$STATUS_FILE"
 	iptables -F
 	iptables -t nat -F
 	iptables -P INPUT ACCEPT
 	iptables -P OUTPUT ACCEPT
 	iptables -P FORWARD ACCEPT
+
+	#disable routing
+	echo "0" > /proc/sys/net/ipv4/ip_forward
 	;;
 "restart")
 	$0 stop
 	$0 start
+	;;
+"status")
+	if [ -r "$STATUS_FILE" ]; then
+		cat "$STATUS_FILE"
+	else
+		echo "fw-rules service stopped"
+	fi
 	;;
 *)
 	echo "Se necesita un parametro válido [start | stop]"
