@@ -52,9 +52,7 @@ case $1 in
 
 	# DHCP Client FW
 	iptables -A OUTPUT -o $WAN_IF -p udp --dport 67 --sport 68 -j ACCEPT
-
 	iptables -A INPUT -i $WAN_IF -p udp --sport 67 --dport 68 -j ACCEPT
-
 
 #>	iptables -A INPUT -i $WAN_IF -p udp --sport 67 --dport 68 -m state --state ESTABLISHED,RELATED -j ACCEPT
 
@@ -65,8 +63,22 @@ case $1 in
 
 #>	iptables -A INPUT -p icmp -m state --state ESTABLISHED,RELATED -j ACCEPT
 
+# FW as a dns client
+	iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
+	iptables -A INPUT -p udp --sport 53 -j ACCEPT
+
+# FW as a http client
+	iptables -A OUTPUT -o $WAN_IF -p tcp --dport 80 -j ACCEPT
+	iptables -A INPUT -i $WAN_IF -p tcp --sport 80 -j ACCEPT
+
+# FW as a https client
+	iptables -A OUTPUT -o $WAN_IF -p tcp --dport 443 -j ACCEPT
+	iptables -A INPUT -i $WAN_IF -p tcp --sport 443 -j ACCEPT
+
+#>	iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 	# Salida a Repositorios de Servidores (7)
+
 	iptables -A FORWARD -i $DMZ_IF -s $DMZ_NET -o $WAN_IF -p tcp --dport 80 -j ACCEPT
 	iptables -A FORWARD -o $DMZ_IF -d $DMZ_NET -i $WAN_IF -p tcp --sport 80 -j ACCEPT
 	iptables -t nat -A POSTROUTING -s $DMZ_NET -o $WAN_IF -p tcp --dport 80 -j SNAT --to $WAN_IP
