@@ -106,7 +106,7 @@ case $1 in
 	iptables -P OUTPUT ACCEPT
 	iptables -P FORWARD ACCEPT
 	;;
-"restart)
+"restart")
 	$0 stop
 	$0 start
 	;;
