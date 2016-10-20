@@ -44,11 +44,15 @@ case $1 in
 	iptables -A INPUT -i $LAN_IF -s $LAN_NET -d $LAN_IP -p tcp --dport 2222 -j ACCEPT
 	iptables -A INPUT -i $DMZ_IF -s $DMZ_NET -d $DMZ_IP  -p tcp --dport 2222 -j ACCEPT
 
-#	iptables -A OUTPUT -o $WAN_IF -s $WAN_IP -p tcp --sport 2222 -j ACCEPT
-#	iptables -A OUTPUT -o $LAN_IF -s $LAN_IP -p tcp --sport 2222 -d $LAN_NET -j ACCEPT
-#	iptables -A OUTPUT -o $DMZ_IF -s $DMZ_IP  -p tcp --sport 2222 -d $DMZ_NET -j ACCEPT
+	# FW acts as ssh server and forwards other tcp services (ssh, dns zone transfers, http, ....) in WAN_IF
+	# so we add one rule for the answers:
+	iptables -A OUTPUT -o $WAN_IF -p tcp  -m state --state ESTABLISHED,RELATED -j ACCEPT
 
+	# FW acts as ssh server also in dmz and lan, no other tcp services in that interfaces
 	iptables -A OUTPUT -p tcp --sport 2222 -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+	# FW forwards dns client queries in WAN_IF to dmz . Next rule supports answers to WAN clients
+#º	iptables -A OUTPUT -o $WAN_IF -p udp --sport 53 -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 	# DHCP Client FW
 	iptables -A OUTPUT -o $WAN_IF -p udp --dport 67 --sport 68 -j ACCEPT
