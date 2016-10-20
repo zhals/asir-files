@@ -39,49 +39,41 @@ case $1 in
 	iptables -P OUTPUT DROP
 	iptables -P FORWARD DROP
 
+# servicios en el FireWall
 	# SSH desde REDES a FW (rules 1,2,3)
 	iptables -A INPUT -i $WAN_IF -d $WAN_IP -p tcp --dport 2222 -j ACCEPT
 	iptables -A INPUT -i $LAN_IF -s $LAN_NET -d $LAN_IP -p tcp --dport 2222 -j ACCEPT
 	iptables -A INPUT -i $DMZ_IF -s $DMZ_NET -d $DMZ_IP  -p tcp --dport 2222 -j ACCEPT
 
-	# FW acts as ssh server and forwards other tcp services (ssh, dns zone transfers, http, ....) in WAN_IF
-	# so we add one rule for the answers:
-	iptables -A OUTPUT -o $WAN_IF -p tcp  -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-	# FW acts as ssh server also in dmz and lan, no other tcp services in that interfaces
+	# seguimiento de conexiones para las respuestas
 	iptables -A OUTPUT -p tcp --sport 2222 -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-	# FW forwards dns client queries in WAN_IF to dmz . Next rule supports answers to WAN clients
-#º	iptables -A OUTPUT -o $WAN_IF -p udp --sport 53 -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-	# DHCP Client FW
+# FireWall como cliente
+	# cliente DHCP
 	iptables -A OUTPUT -o $WAN_IF -p udp --dport 67 --sport 68 -j ACCEPT
 	iptables -A INPUT -i $WAN_IF -p udp --sport 67 --dport 68 -j ACCEPT
-
 #>	iptables -A INPUT -i $WAN_IF -p udp --sport 67 --dport 68 -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-# PING (icmp) client
-
+	# cliente PING (icmp)
 	iptables -A OUTPUT -p icmp -j ACCEPT
 	iptables -A INPUT -p icmp -j ACCEPT
-
 #>	iptables -A INPUT -p icmp -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-# FW as a dns client
+	# Cliente DNS
 	iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
 	iptables -A INPUT -p udp --sport 53 -j ACCEPT
 
-# FW as a http client
+	# Cliente HTTP
 	iptables -A OUTPUT -o $WAN_IF -p tcp --dport 80 -j ACCEPT
 	iptables -A INPUT -i $WAN_IF -p tcp --sport 80 -j ACCEPT
 
-# FW as a https client
+	# Cliente HTTPS
 	iptables -A OUTPUT -o $WAN_IF -p tcp --dport 443 -j ACCEPT
 	iptables -A INPUT -i $WAN_IF -p tcp --sport 443 -j ACCEPT
-
 #>	iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-	# Salida a Repositorios de Servidores (7)
+# Firewall como router
+	# Salida a Repositorios de Servidores de la DMZ (7)
 
 	iptables -A FORWARD -i $DMZ_IF -s $DMZ_NET -o $WAN_IF -p tcp --dport 80 -j ACCEPT
 	iptables -A FORWARD -o $DMZ_IF -d $DMZ_NET -i $WAN_IF -p tcp --sport 80 -j ACCEPT
@@ -91,7 +83,7 @@ case $1 in
 	iptables -A FORWARD -i $LAN_IF -s $LAN_NET -o $DMZ_IF -d $DMZ_NET -p tcp --dport 22 -j ACCEPT
 	iptables -A FORWARD -o $LAN_IF -d $LAN_NET -i $DMZ_IF -s $DMZ_NET -p tcp --sport 22 -j ACCEPT
 
-	# DNS desde LAN a servidor DNS en la DMZ
+	# cliente DNS desde LAN a servidor DNS en la DMZ
 	iptables -A FORWARD -i $LAN_IF -s $LAN_NET -o $DMZ_IF -d $DMZ_NET -p tcp --dport 53 -j ACCEPT
 	iptables -A FORWARD -o $LAN_IF -d $LAN_NET -i $DMZ_IF -s $DMZ_NET -p tcp --sport 53 -j ACCEPT
 
