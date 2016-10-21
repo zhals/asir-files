@@ -1,0 +1,26 @@
+#!/bin/bash
+
+conf="/etc/bind/named.conf.options"
+econf="named.conf.options"
+locl="/etc/bind/named.conf.local"
+elocl="named.conf.local"
+db="/etc/bind/db.pc15.s04"
+edb="db.pc15.s04"
+
+if diff -s $conf $econf >/dev/null;
+then
+    echo "named.conf.options : iguales";
+else echo "named.conf.options : distintos"
+fi
+if diff -s $locl $elocl >/dev/null;
+then
+    echo "named.conf.local : iguales";
+else echo "named.conf.local: distintos"
+fi
+if diff -s $db $edb >/dev/null;
+then
+    echo "db.pc15.s04 : iguales";
+else echo "db.pc15.s04 : distintos"
+fi
+
+
