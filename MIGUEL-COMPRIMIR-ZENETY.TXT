@@ -1,0 +1,75 @@
+#!/bin/bash
+
+menu (){
+opcion=`zenity --text "ELIGE UNA OPCION" \
+	--list --column "Numero" --column "Operacion" \
+	"1" "Comprimir" "2" "Descomprimir" "0" "Salir"`
+}
+
+###descomprimimos###
+
+
+comprimir (){
+	archivo=`zenity --forms --title="comprimir" \
+	--text="INTRODUZCA FICHERO A COMPRIMIR" \
+	--add-entry="archivo"`
+	carpeta=`zenity --forms --title= "comprimir" \
+	--text="INTRUDUZCA LA CARPETA DEL ARCHIVO" \
+	--add-entry="carpeta"`
+
+       cd $carpeta 2>>/tmp/error.txt
+
+
+if [ $archivo ]
+	then
+tar -czvf $archivo.tgz $archivo
+else
+	echo "EL $archivo NO SE PUEDE COMPRIMIR"
+fi
+}
+
+###DESCOMPRIMIR###
+
+
+descomprimir (){ 
+        archivo=`zenity --forms --title="descomprimir" \
+	--text="INTRODUZCA FICHERO A DESCOMPRIMIR" \
+	--add-entry="archivo"`
+       carpeta=`zenity --forms --title="descomprimir" \
+	--text="INTRUDUZCA LA CARPETA DEL ARCHIVO" \
+	--add-entry="carpeta"`
+      cd $carpeta 2>>/tmp/error.txt
+
+
+
+	if [ $archivo ]
+	then
+	tar -xzvf $archivo
+else 
+	echo "EL $archivo NO SE PUEDE DESCOMPRIMIR"
+fi
+}
+
+
+###OPCIONES###
+
+	opciones (){
+	case $funcion in
+	1)comprimir;;
+	2)descomprimir;;
+	0)salir 0;;
+esac
+}
+
+
+	while true
+do
+###MENU###
+ menu
+	if [ $funcion -le 2 ] && [ $funcion -ge 0 ] 
+then
+	opciones
+	else  echo "ELIGA UNA OPCION"
+fi
+	zenity --info --text "PRESIONE UNA TECLA PARA CONTINUAR"
+done
