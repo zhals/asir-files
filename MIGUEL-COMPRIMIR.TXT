@@ -9,7 +9,7 @@ clear
 read opcion
 }
 
-###COMPRIMIRs###
+###COMPRIMIR###
 
 comprimir (){
 	echo "INTRODUZCA ARCHIVO A COMPRIMIR"
